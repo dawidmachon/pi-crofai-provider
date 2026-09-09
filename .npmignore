@@ -11,5 +11,4 @@ test/
 package-lock.json
 tsconfig.json
 AGENTS.md
-PUBLISHING.md
 docs/screenshots/
