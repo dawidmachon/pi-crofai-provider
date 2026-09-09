@@ -20,10 +20,10 @@ Both share the same catalog and `CROFAI_API_KEY`. Registered in one `provider()`
 
 ## Architecture
 
-Single-file extension (`src/index.ts`). No runtime deps.
+Single-file extension (`# `index.ts` (repo root)`). No runtime deps.
 
 ```
-src/index.ts       # Extension: fetchModels + mapModels + register
+# `index.ts` (repo root)       # Extension: fetchModels + mapModels + register
 test/
   selfcheck.ts     # Pure logic tests (no pi runtime needed)
   fixture.json     # Live /v1/models snapshot (2026-09-09)
@@ -56,7 +56,7 @@ test/
 ## Layout
 
 ```
-src/index.ts         # ~100 LOC. No runtime deps.
+# `index.ts` (repo root)         # ~100 LOC. No runtime deps.
 test/
   selfcheck.ts      # node --experimental-strip-types test/selfcheck.ts
   fixture.json      # Live API snapshot for reproducible tests

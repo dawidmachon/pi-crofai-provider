@@ -4,6 +4,20 @@ All notable changes to `pi-crofai-provider` are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — 2026-09-09
+
+### Changed
+
+- Extension entry moved to the package root (`index.ts`). pi's startup
+  extension list now shows `pi-crofai-provider` instead of `src`
+  (local `-e` loads) or `pi-crofai-provider:src` (npm installs).
+
+### Fixed
+
+- No console output at pi startup when the provider is unconfigured — the
+  extension now loads silently and stays invisible until set up. Genuine
+  failures (catalog fetch while configured) still log.
+
 ## [1.0.0] — 2026-09-09
 
 Initial public release.

@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { isVisionModel, mapModels, safeParseFloat } from "../src/index.ts";
+import { isVisionModel, mapModels, safeParseFloat } from "../index.ts";
 
 const fixture: { data: Parameters<typeof mapModels>[0] } = JSON.parse(
 	readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixture.json"), "utf8"),

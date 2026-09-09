@@ -23,14 +23,14 @@
   },
   "homepage": "https://github.com/dawidmachon/pi-crofai-provider#readme",
   "files": [
-    "src",
+    "index.ts",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "pi": {
     "extensions": [
-      "./src/index.ts"
+      "./index.ts"
     ]
   },
   "scripts": {

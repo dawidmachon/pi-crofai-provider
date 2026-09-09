@@ -181,7 +181,8 @@ export default async function provider(pi: ExtensionAPI): Promise<void> {
 	];
 	const active = wanted.filter(([id]) => hasEnvKey || stored.has(id));
 	if (active.length === 0) {
-		console.error("[crofai] not configured (no CROFAI_API_KEY) — providers not registered. Set it and run /reload.");
+		// Stay silent: pi's own extensions never log at startup. A provider the
+		// user hasn't configured simply doesn't appear in /model (see README).
 		return;
 	}
 
