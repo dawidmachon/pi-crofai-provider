@@ -4,6 +4,41 @@ All notable changes to `pi-crofai-provider` are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.5] — 2026-09-09
+
+### Changed
+
+- README rewritten for end users: current 16-model list (live catalog drifted:
+  `qwen3.5-9b` in, `glm-5.2-highspeed` out), clearer setup and footer docs,
+  development details condensed; factual drift corrected (token-cap fields
+  are never honored, pricing guard is silent, throttle is 90 s or 5 turns).
+- AGENTS.md architecture section now describes the snapshot / background
+  revalidate / curations layering and the probe tooling.
+
+## [1.0.4] — 2026-09-09
+
+### Added
+
+- Probe evidence for all 16 models committed: `curations.json` now corrects
+  greg-2-super vision (API flag false), greg-2-ultra/-super reasoning flags
+  (API flags false), and confirms text-only models; `probe-report.md` holds
+  the verbatim request/response evidence.
+- Documented provider limitation: CrofAI ignores both `max_tokens` and
+  `max_completion_tokens` on every model.
+
+### Fixed
+
+- Usage footer re-renders on throttled turns (session cost was invisible
+  until the balance-fetch window opened).
+- Usage footer status is cleared when the active model is not crofai.
+
+### Hardened
+
+- `applyCurations` strips stale thinking-level maps when a curation flips a
+  model to non-reasoning.
+- Background catalog revalidation skips provider re-registration when the
+  live catalog matches the snapshot.
+
 ## [1.0.3] — 2026-09-09
 
 ### Added

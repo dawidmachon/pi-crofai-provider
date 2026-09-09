@@ -20,14 +20,30 @@ Both share the same catalog and `CROFAI_API_KEY`. Registered in one `provider()`
 
 ## Architecture
 
-Single-file extension (`# `index.ts` (repo root)`). No runtime deps.
+Single-file extension at the repo root (`index.ts`, ~330 LOC). No runtime deps.
 
 ```
-# `index.ts` (repo root)       # Extension: fetchModels + mapModels + register
+index.ts                  # Extension: registration + footer wiring
+models.snapshot.json      # Embedded catalog (regenerated each release) — sync startup
+curations.json            # Evidence-based per-model overrides (from probe runs)
+scripts/update-models.mjs # snapshot + probe generator (no deps)
+probe-report.md           # Verbatim probe evidence (committed)
 test/
-  selfcheck.ts     # Pure logic tests (no pi runtime needed)
-  fixture.json     # Live /v1/models snapshot (2026-09-09)
+  selfcheck.ts            # Pure logic tests (no pi runtime needed)
+  fixture.json            # Live /v1/models fixture (2026-09-09)
 ```
+
+### Model data strategy (three layers)
+
+1. **Instant** — `models.snapshot.json` is mapped, curated, and registered
+   synchronously at entry: zero startup latency, works offline.
+2. **Fresh** — live `/v1/models` (public) is fetched in the background once;
+   providers are re-registered only when the result differs from the snapshot
+   (no-churn guard).
+3. **Corrected** — `curations.json` overrides are applied on top of either
+   source by `applyCurations` (vision, reasoning flags, thinking levels,
+   compat merge; a resulting `reasoning: false` also strips stale thinking
+   maps).
 
 ### Key implementation decisions
 
@@ -43,14 +59,30 @@ offer them (API-key section only; CrofAI has no OAuth flow — Bearer keys).
 resolution throws on unresolvable `$ENV` keys — is attached only to configured
 providers (env key or stored `/login` credential for that id). pi keeps
 unconfigured providers' models out of `/model` via its auth check. The
-`/v1/models` endpoint is public, so the catalog is fetched at load regardless
-of auth: models appear immediately after `/login`, no reload needed.
+embedded snapshot means models exist before any network access; the public
+background revalidate means they are current without user action.
 
 **Pricing** — CrofAI returns `$/M` as strings. `parseFloat` + `Number.isFinite` guard. `cacheWrite: 0` because CrofAI doesn't expose that field.
 
 **Thinking map** — CrofAI accepts `"none"|"low"|"medium"|"high"`. pi's `xhigh` maps to `"high"` (closest valid value).
 
-**Fetch timeout** — `AbortSignal.timeout(5000)` composed with `AbortSignal.any([parent, ctl.signal])` so caller cancellation (e.g., pi's session abort) also works.
+**Fetch timeout** — every fetch runs under `setTimeout` + `AbortController`,
+composed with the caller's signal via `AbortSignal.any` so caller
+cancellation (e.g., pi's session abort) also works. Failures are silent:
+models fall back to the snapshot, the footer keeps its last value.
+
+**Usage footer** — session cost is summed locally from turn-end
+`usage.cost.total` (zero extra requests). The credits/requests balance is
+fetched throttled: at most once per 90 s AND only after 5 turns — whichever
+condition is satisfied first wins (light sessions update over time, heavy
+sessions every few prompts). Renders happen even when the throttle blocks a
+fetch (cost may have accumulated); the status is cleared when the active
+model is not crofai. A failed balance fetch still consumes the throttle
+window — deliberate anti-flooding.
+
+**Token caps are not enforceable** — probe evidence shows CrofAI ignores both
+`max_tokens` and `max_completion_tokens` on every model. pi's `maxTokens`
+values are advisory here; do not add `compat.maxTokensField` curations.
 
 ## References
 
@@ -63,12 +95,17 @@ of auth: models appear immediately after `/login`, no reload needed.
 ## Layout
 
 ```
-# `index.ts` (repo root)         # ~100 LOC. No runtime deps.
+index.ts                  # ~330 LOC. No runtime deps.
+models.snapshot.json      # Embedded catalog (update: npm run update-models)
+curations.json            # Per-model overrides (update: npm run probe-models)
+probe-report.md           # Probe evidence (regenerated with curations)
+scripts/update-models.mjs # snapshot + probe generator (no deps)
 test/
   selfcheck.ts      # node --experimental-strip-types test/selfcheck.ts
-  fixture.json      # Live API snapshot for reproducible tests
+  fixture.json      # Live API fixture for reproducible tests
 package.json         # devDeps: @earendil-works/pi-coding-agent (types) + typescript
-tsconfig.json       # strict, NodeNext, noEmit
-AGENTS.md           # this file
-README.md           # user-facing front page
+tsconfig.json        # strict, NodeNext, noEmit
+AGENTS.md            # this file
+README.md            # user-facing front page
+CHANGELOG.md         # user-facing release notes
 ```
