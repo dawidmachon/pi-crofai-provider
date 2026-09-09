@@ -24,6 +24,8 @@
   "homepage": "https://github.com/dawidmachon/pi-crofai-provider#readme",
   "files": [
     "index.ts",
+    "models.snapshot.json",
+    "curations.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
@@ -36,7 +38,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "selfcheck": "node --experimental-strip-types test/selfcheck.ts",
-    "check": "npm run typecheck && npm run selfcheck"
+    "check": "npm run typecheck && npm run selfcheck",
+    "update-models": "node scripts/update-models.mjs snapshot",
+    "probe-models": "node scripts/update-models.mjs probe"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "*",
