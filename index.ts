@@ -156,6 +156,11 @@ export function applyCurations(models: ProviderModelConfig[], curations: Curatio
 		if (c.compat) {
 			out.compat = { ...(m.compat ?? {}), ...c.compat } as ProviderModelConfig["compat"];
 		}
+		if (!out.reasoning) {
+			// a curation (or corrected flag) saying non-reasoning must not leave a
+			// stale thinking map behind for pi to surface
+			delete out.thinkingLevelMap;
+		}
 		return out;
 	});
 }
@@ -278,23 +283,29 @@ function wireFooter(pi: ExtensionAPI, getKey: () => string | undefined): void {
 	let inFlight = false;
 
 	const render = (ctx: any): void => {
+		if (!isCrofai(ctx.model?.provider)) {
+			ctx.ui?.setStatus("crofai-usage", undefined);
+			return;
+		}
 		const text = buildUsageStatus(sessionCost, lastUsage);
 		ctx.ui?.setStatus("crofai-usage", text !== undefined ? ctx.ui?.theme?.fg?.("dim", text) ?? text : undefined);
 	};
 
 	const maybeFetch = async (ctx: any): Promise<void> => {
-		if (inFlight || !shouldFetchUsage(lastFetchAt, turnsSinceFetch, Date.now())) return;
-		const key = getKey();
-		if (!key) return;
-		inFlight = true;
-		lastFetchAt = Date.now();
-		turnsSinceFetch = 0;
-		try {
-			const u = await fetchUsage(key);
-			if (u) lastUsage = u;
-		} finally {
-			inFlight = false;
+		const canFetch = !inFlight && !!getKey() && shouldFetchUsage(lastFetchAt, turnsSinceFetch, Date.now());
+		if (canFetch) {
+			inFlight = true;
+			lastFetchAt = Date.now();
+			turnsSinceFetch = 0;
+			try {
+				const u = await fetchUsage(getKey()!);
+				if (u) lastUsage = u;
+			} finally {
+				inFlight = false;
+			}
 		}
+		// render even when the throttle blocked the fetch: the session cost may
+		// have accumulated since the last render
 		render(ctx);
 	};
 
@@ -338,10 +349,14 @@ export default async function provider(pi: ExtensionAPI): Promise<void> {
 	};
 	registerAll(current);
 
-	// 2. Fresh: background live revalidation (public endpoint, silent on failure).
+	// 2. Fresh: background live revalidation (public endpoint, silent on failure,
+	// and skipped entirely when the catalog is unchanged — re-registering makes
+	// pi rebuild all providers for nothing).
 	void fetchLiveModels().then((live) => {
 		if (!live) return;
-		current = applyCurations(mapModels(live), curations);
+		const fresh = applyCurations(mapModels(live), curations);
+		if (JSON.stringify(fresh) === JSON.stringify(current)) return;
+		current = fresh;
 		registerAll(current);
 	});
 
