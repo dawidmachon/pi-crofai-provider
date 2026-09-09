@@ -1,6 +1,6 @@
 {
   "name": "pi-crofai-provider",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "CrofAI provider for the pi coding agent — chat completions + Responses API from one catalog, with vision-by-id detection, fetch timeout, and /reload refresh.",
   "type": "module",
   "keywords": [
