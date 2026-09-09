@@ -29,8 +29,12 @@ Initial public release.
   `0` with `console.warn`.
 - Pi's official `refreshModels` callback for `/reload` and catalog refreshes.
   Honors `RefreshModelsContext.allowNetwork` (skip fetch during offline init)
-  and `signal` (cancellation). Returns `[]` on error so pi keeps the prior
-  list when the network blips.
+  and `signal` (cancellation). On fetch failure it returns the last known-good
+  catalog — an empty return would be published as the new (empty) catalog and
+  wipe the provider's models.
+- Unconfigured providers are not registered at all, so `/model` shows no
+  refresh errors before setup: a provider is active once `CROFAI_API_KEY` is
+  set or a stored credential exists for its id (`/login` → `auth.json`).
 - Auth via `CROFAI_API_KEY` env var or `/login` → "Use an API key" →
   `crofai` (persists to `~/.pi/agent/auth.json`).
 - Zero runtime dependencies. Only type imports from

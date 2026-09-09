@@ -9,6 +9,9 @@
  */
 
 import type { ExtensionAPI, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
 
@@ -124,8 +127,8 @@ function fetchWithTimeout(parent?: AbortSignal): Promise<CrofAIModel[]> {
 
 /**
  * `refreshModels` is pi's official callback: fires on /reload and catalog refresh.
- * Returning [] on error preserves the prior model list (transient network issues
- * don't wipe the registry).
+ * On network error we return the last known-good list — an empty array would be
+ * published as the new (empty) catalog and wipe the provider's models.
  */
 function register(
 	pi: ExtensionAPI,
@@ -141,18 +144,50 @@ function register(
 		refreshModels: async (ctx: RefreshCtx): Promise<ProviderModelConfig[]> => {
 			if (!ctx.allowNetwork) return initial;
 			try { return mapModels(await fetchWithTimeout(ctx.signal)); }
-			catch (e) { console.error(`[crofai] refresh failed (${name}): ${e}`); return []; }
+			catch (e) {
+				console.error(`[crofai] refresh failed (${name}): ${e}`);
+				return initial; // keep the known-good catalog; next refresh retries
+			}
 		},
 	});
 }
 
-/* ── Entry ───────────────────────────────────────────────────────────────── */
+/* ── Configuration gate ───────────────────────────────────────────────── */
+
+/** Stored pi credentials: ~/.pi/agent/auth.json → { [providerId]: credential } */
+function readStoredProviderIds(): Set<string> {
+	try {
+		const dir = process.env.PI_CODING_AGENT_DIR?.trim() || join(homedir(), ".pi", "agent");
+		const auth = JSON.parse(readFileSync(join(dir, "auth.json"), "utf8")) as Record<string, unknown>;
+		return new Set(Object.keys(auth));
+	} catch {
+		return new Set();
+	}
+}
+
+/* ── Entry ───────────────────────────────────────────────────────────── */
 
 export default async function provider(pi: ExtensionAPI): Promise<void> {
+	// Not configured → stay invisible. Registering anyway would make pi's /model
+	// catalog refresh fail with "Failed to resolve API key … CROFAI_API_KEY"
+	// (pi-ai throws on unresolvable $ENV keys instead of skipping the provider).
+	// A provider counts as configured via the env key OR a stored /login
+	// credential for its own id (auth.json is per provider id).
+	const hasEnvKey = !!process.env.CROFAI_API_KEY?.trim();
+	const stored = readStoredProviderIds();
+	const wanted: Array<[string, "openai-completions" | "openai-responses"]> = [
+		["crofai", "openai-completions"],
+		["crofai-responses", "openai-responses"],
+	];
+	const active = wanted.filter(([id]) => hasEnvKey || stored.has(id));
+	if (active.length === 0) {
+		console.error("[crofai] not configured (no CROFAI_API_KEY) — providers not registered. Set it and run /reload.");
+		return;
+	}
+
 	let initial: ProviderModelConfig[];
 	try { initial = mapModels(await fetchWithTimeout()); }
 	catch (e) { console.error(`[crofai] init failed: ${e}`); return; }
 
-	register(pi, "crofai", "openai-completions", initial);
-	register(pi, "crofai-responses", "openai-responses", initial);
+	for (const [name, api] of active) register(pi, name, api, initial);
 }

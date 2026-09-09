@@ -35,7 +35,9 @@ test/
 - `id` contains `"vision"` or `"-vl-"` or ends with `"-vl"` → vision
 - `id` starts with `"kimi-"`, `"gemma-4-"`, or `"qwen3."` → vision (prefix = future family members inherit)
 
-**`refreshModels` callback** — official pi pattern for dynamic catalogs. Returns `[]` on error to preserve the prior list (transient network blips don't wipe the registry). Checked `ctx.allowNetwork` to skip network on offline init.
+**`refreshModels` callback** — official pi pattern for dynamic catalogs. On network error it returns the last known-good list — an empty array would be published as the new (empty) catalog and wipe the models. `ctx.allowNetwork` skips network on offline refresh phases.
+
+**Unconfigured gate** — a provider registers only when configured: `CROFAI_API_KEY` set (env covers both providers) or a stored credential for its own id in `~/.pi/agent/auth.json` (respects `PI_CODING_AGENT_DIR`). Registering unconfigured would make pi's `/model` catalog refresh fail: pi-ai's credential resolution throws on unresolvable `$ENV` keys (unlike builtins, whose unconfigured auth resolves to `undefined` gracefully). Set the key and `/reload` to enable.
 
 **Pricing** — CrofAI returns `$/M` as strings. `parseFloat` + `Number.isFinite` guard. `cacheWrite: 0` because CrofAI doesn't expose that field.
 

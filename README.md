@@ -30,6 +30,10 @@ export CROFAI_API_KEY="your_key_here"
 
 Or: `pi` → `/login` → "Use an API key" → provider `crofai` → paste key.
 
+Unconfigured providers stay invisible: until the key is set (or a stored
+`crofai` credential exists), the providers are not registered and `/model`
+shows no refresh errors. Set the key, then `/reload`.
+
 ## Hard-fork fixes vs upstream
 
 1. **Vision detection** — upstream's hand-curated list had 5 phantom entries and missed `deepseek-v4-flash-vision-exp`. This fork infers vision from model-id patterns.
@@ -37,6 +41,7 @@ Or: `pi` → `/login` → "Use an API key" → provider `crofai` → paste key.
 3. **NaN guard** — malformed pricing fields fall back to 0 with a warning instead of silent corruption.
 4. **`/reload` support** — uses pi's official `refreshModels` callback; new CrofAI models appear after `/reload`, no restart needed.
 5. **Responses API** — registers both `/v1/chat/completions` and `/v1/responses` providers from the same catalog.
+6. **No phantom refresh errors** — upstream registers even when unconfigured, so pi's `/model` shows "Could not refresh" until auth exists; this fork gates registration on configuration.
 
 ## Models (16)
 
