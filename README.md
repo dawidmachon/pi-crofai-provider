@@ -28,11 +28,13 @@ pi install /path/to/pi-crofai-provider
 export CROFAI_API_KEY="your_key_here"
 ```
 
-Or: `pi` → `/login` → "Use an API key" → provider `crofai` → paste key.
+Or: `pi` → `/login` → **Use an API key** → `crofai` (or `crofai-responses`) →
+paste key. CrofAI is API-key auth only, so it appears in that section — there
+is no account/OAuth flow.
 
-Unconfigured providers stay invisible: until the key is set (or a stored
-`crofai` credential exists), the providers are not registered and `/model`
-shows no refresh errors. Set the key, then `/reload`.
+Providers always appear in `/login`; their models show up in `/model` as soon
+as auth exists — no restart needed. Live catalog refresh activates per provider
+once it is configured (run `/reload` once after your first `/login`).
 
 ## Hard-fork fixes vs upstream
 
@@ -41,7 +43,7 @@ shows no refresh errors. Set the key, then `/reload`.
 3. **NaN guard** — malformed pricing fields fall back to 0 with a warning instead of silent corruption.
 4. **`/reload` support** — uses pi's official `refreshModels` callback; new CrofAI models appear after `/reload`, no restart needed.
 5. **Responses API** — registers both `/v1/chat/completions` and `/v1/responses` providers from the same catalog.
-6. **No phantom refresh errors** — upstream registers even when unconfigured, so pi's `/model` shows "Could not refresh" until auth exists; this fork gates registration on configuration.
+6. **No phantom refresh errors** — unconfigured providers never trigger `/model` refresh errors: live catalog refresh attaches only once a provider is configured (env key or stored credential).
 
 ## Models (16)
 

@@ -37,7 +37,14 @@ test/
 
 **`refreshModels` callback** — official pi pattern for dynamic catalogs. On network error it returns the last known-good list — an empty array would be published as the new (empty) catalog and wipe the models. `ctx.allowNetwork` skips network on offline refresh phases.
 
-**Unconfigured gate** — a provider registers only when configured: `CROFAI_API_KEY` set (env covers both providers) or a stored credential for its own id in `~/.pi/agent/auth.json` (respects `PI_CODING_AGENT_DIR`). Registering unconfigured would make pi's `/model` catalog refresh fail: pi-ai's credential resolution throws on unresolvable `$ENV` keys (unlike builtins, whose unconfigured auth resolves to `undefined` gracefully). Set the key and `/reload` to enable.
+**Auth / visibility model** — providers are always registered so `/login` can
+offer them (API-key section only; CrofAI has no OAuth flow — Bearer keys).
+`refreshModels` — pi's opt-in to network catalog refresh, whose credential
+resolution throws on unresolvable `$ENV` keys — is attached only to configured
+providers (env key or stored `/login` credential for that id). pi keeps
+unconfigured providers' models out of `/model` via its auth check. The
+`/v1/models` endpoint is public, so the catalog is fetched at load regardless
+of auth: models appear immediately after `/login`, no reload needed.
 
 **Pricing** — CrofAI returns `$/M` as strings. `parseFloat` + `Number.isFinite` guard. `cacheWrite: 0` because CrofAI doesn't expose that field.
 

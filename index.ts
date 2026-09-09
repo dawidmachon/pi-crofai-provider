@@ -135,20 +135,29 @@ function register(
 	name: string,
 	api: "openai-completions" | "openai-responses",
 	initial: ProviderModelConfig[],
+	configured: boolean,
 ) {
 	pi.registerProvider(name, {
 		baseUrl: BASE,
 		apiKey: "$CROFAI_API_KEY",
 		api,
 		models: initial,
-		refreshModels: async (ctx: RefreshCtx): Promise<ProviderModelConfig[]> => {
-			if (!ctx.allowNetwork) return initial;
-			try { return mapModels(await fetchWithTimeout(ctx.signal)); }
-			catch (e) {
-				console.error(`[crofai] refresh failed (${name}): ${e}`);
-				return initial; // keep the known-good catalog; next refresh retries
+		// Live catalog refresh is pi's official callback — but pi's refresh
+		// resolves our $ENV credential during /model refreshes and THROWS when
+		// it is unresolvable and no credential is stored. Only configured
+		// providers (env key or stored /login credential) may opt in.
+		...(configured
+			? {
+				refreshModels: async (ctx: RefreshCtx): Promise<ProviderModelConfig[]> => {
+					if (!ctx.allowNetwork) return initial;
+					try { return mapModels(await fetchWithTimeout(ctx.signal)); }
+					catch (e) {
+						console.error(`[crofai] refresh failed (${name}): ${e}`);
+						return initial; // keep the known-good catalog; next refresh retries
+					}
+				},
 			}
-		},
+			: {}),
 	});
 }
 
@@ -168,27 +177,28 @@ function readStoredProviderIds(): Set<string> {
 /* ── Entry ───────────────────────────────────────────────────────────── */
 
 export default async function provider(pi: ExtensionAPI): Promise<void> {
-	// Not configured → stay invisible. Registering anyway would make pi's /model
-	// catalog refresh fail with "Failed to resolve API key … CROFAI_API_KEY"
-	// (pi-ai throws on unresolvable $ENV keys instead of skipping the provider).
-	// A provider counts as configured via the env key OR a stored /login
-	// credential for its own id (auth.json is per provider id).
 	const hasEnvKey = !!process.env.CROFAI_API_KEY?.trim();
 	const stored = readStoredProviderIds();
 	const wanted: Array<[string, "openai-completions" | "openai-responses"]> = [
 		["crofai", "openai-completions"],
 		["crofai-responses", "openai-responses"],
 	];
-	const active = wanted.filter(([id]) => hasEnvKey || stored.has(id));
-	if (active.length === 0) {
-		// Stay silent: pi's own extensions never log at startup. A provider the
-		// user hasn't configured simply doesn't appear in /model (see README).
-		return;
+
+	// /v1/models is public (no auth), so fetch the catalog even when
+	// unconfigured: once the user logs in, models are already in /model — no
+	// reload needed. Stay silent when unconfigured (pi extensions never log at
+	// startup); a configured provider failing to load its catalog is reported.
+	let initial: ProviderModelConfig[] = [];
+	try { initial = mapModels(await fetchWithTimeout()); }
+	catch (e) {
+		if (hasEnvKey || stored.size > 0) console.error(`[crofai] init failed: ${e}`);
 	}
 
-	let initial: ProviderModelConfig[];
-	try { initial = mapModels(await fetchWithTimeout()); }
-	catch (e) { console.error(`[crofai] init failed: ${e}`); return; }
-
-	for (const [name, api] of active) register(pi, name, api, initial);
+	// Always register so /login offers crofai under "Use an API key" (apiKey
+	// auth only — CrofAI has no account/OAuth flow, docs confirm Bearer keys).
+	// pi keeps unconfigured providers' models out of /model via its auth check
+	// until the env key is set or a credential is stored for that provider id.
+	for (const [name, api] of wanted) {
+		register(pi, name, api, initial, hasEnvKey || stored.has(name));
+	}
 }

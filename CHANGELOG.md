@@ -4,6 +4,20 @@ All notable changes to `pi-crofai-provider` are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] — 2026-09-09
+
+### Fixed
+
+- `/login` now offers crofai out of the box: 1.0.1 skipped registration until
+  configured, but pi's login dialog lists registered providers only — the
+  provider could never be configured. Providers are now always registered and
+  appear under "Use an API key" (CrofAI is API-key auth only; no OAuth flow).
+- Unconfigured providers no longer trigger `/model` refresh errors: the
+  throwing `refreshModels` opt-in is attached only once a provider is
+  configured (env key or stored credential for its id).
+- The public `/v1/models` catalog is fetched at load even when unconfigured,
+  so models appear immediately after `/login` — no reload needed.
+
 ## [1.0.1] — 2026-09-09
 
 ### Changed
