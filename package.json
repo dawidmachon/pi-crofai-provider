@@ -1,0 +1,52 @@
+{
+  "name": "pi-crofai-provider",
+  "version": "1.0.0",
+  "description": "CrofAI provider for the pi coding agent — chat completions + Responses API from one catalog, with vision-by-id detection, fetch timeout, and /reload refresh.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-coding-agent",
+    "crofai",
+    "provider"
+  ],
+  "author": {
+    "name": "Dawid Machon",
+    "url": "https://github.com/dawidmachon"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dawidmachon/pi-crofai-provider.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dawidmachon/pi-crofai-provider/issues"
+  },
+  "homepage": "https://github.com/dawidmachon/pi-crofai-provider#readme",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "selfcheck": "node --experimental-strip-types test/selfcheck.ts",
+    "check": "npm run typecheck && npm run selfcheck"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^24.0.0"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

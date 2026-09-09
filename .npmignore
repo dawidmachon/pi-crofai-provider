@@ -1,0 +1,15 @@
+# Defensive: even though package.json#files whitelists what ships,
+# npm also honors .npmignore. Listed here for clarity — these must
+# NOT ship in the tarball.
+node_modules/
+test/
+*.log
+.DS_Store
+.git/
+.gitignore
+.npmignore
+package-lock.json
+tsconfig.json
+AGENTS.md
+PUBLISHING.md
+docs/screenshots/

@@ -1,0 +1,48 @@
+name: Publish to npm
+
+# Trusted publishing via GitHub Actions OIDC. Requires:
+#  1. Trusted publisher configured at https://www.npmjs.com/package/pi-crofai-provider/access
+#  2. Tag push matching v* (one-time setup; see PUBLISHING.md)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    # Allow manual publish from the Actions UI for one-off re-publishes
+    # (e.g., after fixing a typo without bumping the version).
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # OIDC token generation is the whole point — this permission is required.
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+
+      - name: Install latest npm
+        # Trusted publishing requires npm >= 11.5.1; ubuntu-latest ships an older one.
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify (typecheck + selfcheck)
+        run: npm run check
+
+      - name: Publish
+        # --provenance is auto-on via publishConfig.provenance=true in package.json,
+        # but kept explicit per Phil Nash's debugging notes (https://philna.sh/blog/2026/01/28/trusted-publishing-npm/).
+        run: npm publish --provenance
+        env:
+          # No NPM_TOKEN secret needed — npm CLI detects OIDC and uses it.
+          # Listing NODE_AUTH_TOKEN here would be a mistake; it would override OIDC.
+          NODE_AUTH_TOKEN: ""
