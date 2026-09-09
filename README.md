@@ -1,5 +1,7 @@
 # pi-crofai-provider
 
+[![npm version](https://img.shields.io/npm/v/pi-crofai-provider.svg)](https://www.npmjs.com/package/pi-crofai-provider)
+
 CrofAI provider for the [pi coding agent](https://github.com/earendil-works/pi-coding-agent) — hard fork of [`pi-crofai`](https://www.npmjs.com/package/pi-crofai).
 
 ## Which provider to use
@@ -14,13 +16,20 @@ Both share the same 16-model catalog and the same API key.
 ## Install
 
 ```bash
-# Local checkout (one session):
-pi -e /path/to/pi-crofai-provider
+# From npm (recommended):
+pi install npm:pi-crofai-provider
 
-# Persistent:
-pi install /path/to/pi-crofai-provider
-# Then restart pi or type /reload
+# Keep it updated:
+pi update npm:pi-crofai-provider
+
+# Or straight from this repo (latest main):
+pi install git:github.com/dawidmachon/pi-crofai-provider
+
+# Dev: local checkout, one session:
+pi -e /path/to/pi-crofai-provider
 ```
+
+Then restart pi or type `/reload`.
 
 ## Setup
 
