@@ -25,24 +25,23 @@
  */
 
 import type { ExtensionAPI, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import snapshotData from "./models.snapshot.json" with { type: "json" };
-import curationsData from "./curations.json" with { type: "json" };
+// Unused in 1.0.6 deprecation stub (kept for historical reference):
+// import { readFileSync } from "node:fs";
+// import { homedir } from "node:os";
+// import { join } from "node:path";
+import _snapshotData from "./models.snapshot.json" with { type: "json" };
+import _curationsData from "./curations.json" with { type: "json" };
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
 
-const BASE = "https://crof.ai/v1";
-const MODELS_URL = `${BASE}/models`;
-const USAGE_URL = "https://crof.ai/usage_api/";
-const FETCH_TIMEOUT_MS = 5_000;
-const USAGE_TIMEOUT_MS = 4_000;
-/** Usage-API fetch throttle: needs 90 s since the last fetch AND 5 turns — the
- *  first satisfied condition wins, so light sessions update over time and
- *  heavy sessions update every few prompts without flooding the API. */
-const USAGE_MIN_INTERVAL_MS = 90_000;
-const USAGE_MIN_TURNS = 5;
+// [v1.0.6] Historical constants preserved for reference (no longer used):
+// const BASE = "https://crof.ai/v1";
+// const MODELS_URL = `${BASE}/models`;
+// const USAGE_URL = "https://crof.ai/usage_api/";
+// const FETCH_TIMEOUT_MS = 5_000;
+// const USAGE_TIMEOUT_MS = 4_000;
+// const USAGE_MIN_INTERVAL_MS = 90_000;
+// const USAGE_MIN_TURNS = 5;
 
 /* ── API types ───────────────────────────────────────────────────────────── */
 
@@ -166,9 +165,12 @@ export function applyCurations(models: ProviderModelConfig[], curations: Curatio
 }
 
 /* ── Usage footer (pure helpers, unit-tested) ────────────────────────────── */
+// Note: constants inlined for 1.0.6 deprecation stub (full code in git history).
 
 export function shouldFetchUsage(lastFetchAt: number, turnsSinceFetch: number, now: number): boolean {
 	if (!lastFetchAt) return true;
+	const USAGE_MIN_INTERVAL_MS = 90_000;
+	const USAGE_MIN_TURNS = 5;
 	return now - lastFetchAt >= USAGE_MIN_INTERVAL_MS || turnsSinceFetch >= USAGE_MIN_TURNS;
 }
 
@@ -186,180 +188,37 @@ export function buildUsageStatus(sessionCost: number | null, usage: { credits: n
 	return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-/* ── Fetch ───────────────────────────────────────────────────────────────── */
+/* [v1.0.6] fetchJson/fetchLiveModels removed (were internal; see git history). */
 
-async function fetchJson(url: string, key: string | undefined, timeoutMs: number, signal?: AbortSignal): Promise<any> {
-	const headers: Record<string, string> = {};
-	if (key) headers.Authorization = `Bearer ${key}`;
-	const ctl = new AbortController();
-	const timer = setTimeout(() => ctl.abort(), timeoutMs);
-	const sig = signal ? AbortSignal.any([signal, ctl.signal]) : ctl.signal;
-	try {
-		const r = await fetch(url, { headers, signal: sig });
-		if (!r.ok) return null;
-		return await r.json();
-	} catch {
-		return null;
-	} finally {
-		clearTimeout(timer);
-	}
-}
-
-async function fetchLiveModels(signal?: AbortSignal): Promise<CrofAIModel[] | null> {
-	const data = await fetchJson(MODELS_URL, undefined, FETCH_TIMEOUT_MS, signal);
-	const list = Array.isArray(data?.data) ? data.data : null;
-	return list && list.length > 0 ? list : null;
-}
-
-async function fetchUsage(key: string, signal?: AbortSignal): Promise<{ credits: number; requests: number | null } | null> {
-	const data = await fetchJson(USAGE_URL, key, USAGE_TIMEOUT_MS, signal);
-	if (typeof data?.credits !== "number") return null;
-	return { credits: data.credits, requests: typeof data.usable_requests === "number" ? data.usable_requests : null };
-}
-
-/* ── Stored credentials: ~/.pi/agent/auth.json → { [providerId]: {key} } ─── */
-
-function readStoredAuth(): { ids: Set<string>; keyFor: (id: string) => string | undefined } {
-	const ids = new Set<string>();
-	const keys = new Map<string, string>();
-	try {
-		const dir = process.env.PI_CODING_AGENT_DIR?.trim() || join(homedir(), ".pi", "agent");
-		const auth = JSON.parse(readFileSync(join(dir, "auth.json"), "utf8")) as Record<string, { key?: unknown }>;
-		for (const [id, entry] of Object.entries(auth)) {
-			ids.add(id);
-			if (entry && typeof entry.key === "string" && entry.key) keys.set(id, entry.key);
-		}
-	} catch { /* no auth.json — env-only setup */ }
-	return { ids, keyFor: (id) => keys.get(id) };
-}
-
-/* ── Registration ────────────────────────────────────────────────────────── */
-
-/**
- * `refreshModels` is pi's live catalog-refresh callback, attached only when the
- * provider is configured: pi's refresh resolves our $ENV credential and THROWS
- * when it is unresolvable and no credential is stored. On network error we
- * return the last known-good list — an empty array would be published as the
- * new (empty) catalog and wipe the provider's models.
+/* [v1.0.6] Dead code removed — registration, footer, and credential helpers.
+ * Historical implementation preserved in git (v1.0.5 and earlier).
+ * See DEPRECATION.md for architecture summary; sorry.txt for owner statement.
  */
-function register(
-	pi: ExtensionAPI,
-	name: string,
-	api: "openai-completions" | "openai-responses",
-	initial: ProviderModelConfig[],
-	configured: boolean,
-) {
-	pi.registerProvider(name, {
-		baseUrl: BASE,
-		apiKey: "$CROFAI_API_KEY",
-		api,
-		models: initial,
-		...(configured
-			? {
-				refreshModels: async (ctx: RefreshCtx): Promise<ProviderModelConfig[]> => {
-					if (!ctx.allowNetwork) return initial;
-					const live = await fetchLiveModels(ctx.signal);
-					if (!live) return initial;
-					return applyCurations(mapModels(live), curationsData as Curations);
-				},
-			}
-			: {}),
-	});
-}
 
-/* ── RefreshModels context (pi-ai types subset) ──────────────────────────── */
+/* ── Deprecation notice (shown once at startup) ────────────────────────────────────────────────────── */
 
-interface RefreshCtx { allowNetwork: boolean; signal: AbortSignal }
-
-/* ── Footer wiring ───────────────────────────────────────────────────────── */
-
-const isCrofai = (id?: string) => id === "crofai" || id === "crofai-responses";
-
-function wireFooter(pi: ExtensionAPI, getKey: () => string | undefined): void {
-	let sessionCost: number | null = null;
-	let lastUsage: { credits: number; requests: number | null } | null = null;
-	let lastFetchAt = 0;
-	let turnsSinceFetch = 0;
-	let inFlight = false;
-
-	const render = (ctx: any): void => {
-		if (!isCrofai(ctx.model?.provider)) {
-			ctx.ui?.setStatus("crofai-usage", undefined);
-			return;
-		}
-		const text = buildUsageStatus(sessionCost, lastUsage);
-		ctx.ui?.setStatus("crofai-usage", text !== undefined ? ctx.ui?.theme?.fg?.("dim", text) ?? text : undefined);
-	};
-
-	const maybeFetch = async (ctx: any): Promise<void> => {
-		const canFetch = !inFlight && !!getKey() && shouldFetchUsage(lastFetchAt, turnsSinceFetch, Date.now());
-		if (canFetch) {
-			inFlight = true;
-			lastFetchAt = Date.now();
-			turnsSinceFetch = 0;
-			try {
-				const u = await fetchUsage(getKey()!);
-				if (u) lastUsage = u;
-			} finally {
-				inFlight = false;
-			}
-		}
-		// render even when the throttle blocked the fetch: the session cost may
-		// have accumulated since the last render
-		render(ctx);
-	};
-
-	pi.on("session_start", async (_e, ctx: any) => {
-		render(ctx);
-		if (isCrofai(ctx.model?.provider)) await maybeFetch(ctx);
-	});
-
-	pi.on("model_select", async (e, ctx: any) => {
-		if (!isCrofai(e.model?.provider) && !isCrofai(e.previousModel?.provider)) return;
-		render(ctx);
-		if (isCrofai(e.model?.provider)) await maybeFetch(ctx);
-	});
-
-	pi.on("turn_end", async (e, ctx: any) => {
-		const msg = e.message as { provider?: string; usage?: { cost?: { total?: number } } } | undefined;
-		if (isCrofai(msg?.provider) && typeof msg?.usage?.cost?.total === "number") {
-			sessionCost = (sessionCost ?? 0) + (msg.usage.cost.total as number);
-		}
-		turnsSinceFetch++;
-		if (isCrofai(ctx.model?.provider)) await maybeFetch(ctx);
-		else render(ctx);
-	});
+function showDeprecationNotice(): void {
+	// Short notice; full context lives in DEPRECATION.md and the linked posts.
+	// Tone: neutral record. CrofAI was a young developer's project; this was a mistake,
+	// not malice. We take no sides. We're archiving to prevent accidental installs.
+	// eslint-disable-next-line no-console
+	console.log(
+		"\n" +
+		"\u26a0\ufe0f  pi-crofai-provider is deprecated and no longer works.\n" +
+		"CrofAI's service (crof.ai) has been unavailable since ~Sep 15, 2026.\n" +
+		"Context: https://kendell.dev/blog/crofaifalse/  |  https://archive.ph/UY79M\n" +
+		"Owner acknowledged routing greg models to OpenRouter; see DEPRECATION.md.\n" +
+		"This package is now archived. Remove from your pi extensions.\n"
+	);
 }
 
 /* ── Entry ───────────────────────────────────────────────────────────────── */
 
-export default async function provider(pi: ExtensionAPI): Promise<void> {
-	const hasEnvKey = !!process.env.CROFAI_API_KEY?.trim();
-	const stored = readStoredAuth();
-	const configuredFor = (id: string): boolean => hasEnvKey || stored.ids.has(id);
-	const usageKey = (): string | undefined =>
-		process.env.CROFAI_API_KEY?.trim() || stored.keyFor("crofai") || stored.keyFor("crofai-responses");
-	const curations = curationsData as Curations;
+export default async function provider(_pi: ExtensionAPI): Promise<void> {
+	showDeprecationNotice();
 
-	// 1. Instant: embedded snapshot → providers registered before this returns.
-	let current = applyCurations(mapModels((snapshotData as { data: CrofAIModel[] }).data ?? []), curations);
-	const registerAll = (models: ProviderModelConfig[]): void => {
-		register(pi, "crofai", "openai-completions", models, configuredFor("crofai"));
-		register(pi, "crofai-responses", "openai-responses", models, configuredFor("crofai-responses"));
-	};
-	registerAll(current);
-
-	// 2. Fresh: background live revalidation (public endpoint, silent on failure,
-	// and skipped entirely when the catalog is unchanged — re-registering makes
-	// pi rebuild all providers for nothing).
-	void fetchLiveModels().then((live) => {
-		if (!live) return;
-		const fresh = applyCurations(mapModels(live), curations);
-		if (JSON.stringify(fresh) === JSON.stringify(current)) return;
-		current = fresh;
-		registerAll(current);
-	});
-
-	// 3. Footer: local session cost + throttled credits/requests balance.
-	wireFooter(pi, usageKey);
+	// Providers are not registered. CrofAI is no longer operational.
+	// Historical code and catalog remain in the repo for reference.
+	// See DEPRECATION.md for full context and archiving notes.
+	return;
 }

@@ -1,10 +1,12 @@
 # pi-crofai-provider
 
+> **⚠️ Deprecated and archived.** This package no longer works. See [DEPRECATION.md](DEPRECATION.md) for details.
+
 [![npm version](https://img.shields.io/npm/v/pi-crofai-provider.svg)](https://www.npmjs.com/package/pi-crofai-provider)
 
 All CrofAI models for the [pi coding agent](https://github.com/earendil-works/pi-coding-agent) — instant startup, a live usage footer, and model info measured against the real API instead of trusted from it.
 
-Hard fork of [`pi-crofai`](https://www.npmjs.com/package/pi-crofai).
+**This package is deprecated.** CrofAI's service is no longer operational. Context: https://kendell.dev/blog/crofaifalse/ | https://archive.ph/UY79M
 
 ## Install
 

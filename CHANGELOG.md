@@ -4,6 +4,17 @@ All notable changes to `pi-crofai-provider` are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.6] — 2026-09-15
+
+### Deprecated
+
+- **pi-crofai-provider is deprecated and archived.** CrofAI's service (`crof.ai`) has been returning 404 since ~Sep 15, 2026 and is no longer operational.
+- Short notice shown at pi startup; full context in `DEPRECATION.md`.
+- Links: https://kendell.dev/blog/crofaifalse/ | https://archive.ph/UY79M
+- Owner acknowledged routing greg models to OpenRouter ("so greg models are openrouter re-routes").
+- Repository will be archived (read-only). npm package deprecated.
+- No new features; code preserved as historical record.
+
 ## [1.0.5] — 2026-09-09
 
 ### Changed
